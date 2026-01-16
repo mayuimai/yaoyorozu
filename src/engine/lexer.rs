@@ -1,6 +1,6 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
-    若し,
+    もし,
     ならば,
     繰返,
     表示,
@@ -60,7 +60,7 @@ impl Lexer {
         if self.is_japanese_alphabetic(ch) {
             let ident = self.read_identifier();
             return match ident.as_str() {
-                "若し" => Token::若し,
+                "もし" => Token::もし,
                 "ならば" => Token::ならば,
                 "繰返" => Token::繰返,
                 "表示" => Token::表示,

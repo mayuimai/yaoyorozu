@@ -1,18 +1,27 @@
 use crate::engine::ast::{命令, 式};
+use std::cell::RefCell;
 
-pub struct Evaluator;
+pub struct Evaluator {
+    出力バッファ: RefCell<String>,
+}
 
 impl Evaluator {
-    pub fn 実行(&self, 命令セット: Vec<命令>) {
+    pub fn new() -> Self {
+        Self {
+            出力バッファ: RefCell::new(String::new()),
+        }
+    }
+
+    pub fn 実行(&self, 命令セット: Vec<命令>) -> String {
         for cmd in 命令セット {
             self.命令を実行(cmd);
         }
+        self.出力バッファ.borrow().clone()
     }
 
     fn 命令を実行(&self, cmd: 命令) {
         match cmd {
-            命令::若し文 { 条件, 実行内容 } => {
-                // 条件が「真（true）」なら中身を実行
+            命令::もし文 { 条件, 実行内容 } => {
                 if self.論理評価(条件) {
                     for 内側の命令 in 実行内容 {
                         self.命令を実行(内側の命令);
@@ -20,30 +29,24 @@ impl Evaluator {
                 }
             }
             命令::表示文(内容) => {
-                // 計算結果を数値として出して、それを表示する
-                println!("【出力】: {}", self.数値評価(内容));
+                let 値 = self.数値評価(内容);
+                let mut buffer = self.出力バッファ.borrow_mut();
+                buffer.push_str(&format!("【出力】: {}\n", 値));
             }
         }
     }
 
-    // 「はい」か「いいえ」を判定する（比較用）
     fn 論理評価(&self, expr: 式) -> bool {
         match expr {
             式::比較 { 左辺, 演算子, 右辺 } => {
                 let 左 = self.数値評価(*左辺);
                 let 右 = self.数値評価(*右辺);
-                if 演算子 == "＝" {
-                    左 == 右
-                } else {
-                    false
-                }
+                if 演算子 == "＝" { 左 == 右 } else { false }
             }
-            // 単なる数値や計算式が条件に来た場合は、0以外なら真とする
             _ => self.数値評価(expr) != 0.0,
         }
     }
 
-    // 実際の計算を行う
     fn 数値評価(&self, expr: 式) -> f64 {
         match expr {
             式::数値(n) => n,
@@ -54,11 +57,10 @@ impl Evaluator {
                     '+' => 左 + 右,
                     '-' => 左 - 右,
                     '*' => 左 * 右,
-                    '/' => if 右 != 0.0 { 左 / 右 } else { 0.0 }, // 0除算対策
+                    '/' => if 右 != 0.0 { 左 / 右 } else { 0.0 },
                     _ => 0.0,
                 }
             }
-            // 比較式が数値評価された場合は、真なら1.0、偽なら0.0を返す
             式::比較 { .. } => if self.論理評価(expr) { 1.0 } else { 0.0 },
         }
     }

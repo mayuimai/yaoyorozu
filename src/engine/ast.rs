@@ -1,6 +1,6 @@
 #[derive(Debug, Clone)]
 pub enum 命令 {
-    若し文 {
+    もし文 {
         条件: 式,
         実行内容: Vec<命令>,
     },

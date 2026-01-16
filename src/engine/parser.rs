@@ -8,6 +8,7 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(mut lexer: Lexer) -> Self {
+        // ここで E0599 が出ている場合、lexer.rs の保存を確認してください！
         let first_token = lexer.次のトークンを出す();
         Self {
             lexer,
@@ -16,6 +17,7 @@ impl Parser {
     }
 
     fn advance(&mut self) {
+        // ここ！ Lexer側で「pub fn 次のトークンを出す」となっている必要があります
         self.current_token = self.lexer.次のトークンを出す();
     }
 
@@ -33,21 +35,20 @@ impl Parser {
 
     fn 命令を解析する(&mut self) -> Option<命令> {
         match self.current_token {
-            Token::若し => self.若し文を解析(),
+            Token::もし => self.もし文を解析(),
             Token::表示 => self.表示文を解析(),
             _ => None,
         }
     }
 
     fn 表示文を解析(&mut self) -> Option<命令> {
-        self.advance(); // 「表示」を飛ばす
+        self.advance();
         let 内容 = self.式を解析する()?;
         Some(命令::表示文(内容))
     }
 
-    fn 若し文を解析(&mut self) -> Option<命令> {
-        self.advance(); // 「若し」を飛ばす
-
+    fn もし文を解析(&mut self) -> Option<命令> {
+        self.advance(); // 「もし」を飛ばす
         let 条件 = self.式を解析する()?;
 
         if self.current_token != Token::ならば { return None; }
@@ -66,11 +67,11 @@ impl Parser {
         }
         self.advance(); // 「｝」を飛ばす
 
-        Some(命令::若し文 { 条件, 実行内容 })
+        Some(命令::もし文 { 条件, 実行内容 })
     }
 
     fn 式を解析する(&mut self) -> Option<式> {
-        let mut 左辺 = match self.current_token {
+        let 左辺 = match self.current_token {
             Token::数値(n) => 式::数値(n),
             _ => return None,
         };
@@ -96,7 +97,7 @@ impl Parser {
                     右辺: Box::new(右辺),
                 })
             }
-            _ => Some(左辺), // 記号がない場合は単一の数値を返す
+            _ => Some(左辺),
         }
     }
 }
