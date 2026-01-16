@@ -1,0 +1,16 @@
+[package]
+name = "yaoyorozu"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# GUIライブラリ
+eframe = "0.27.0"
+egui = "0.27.0"
+
+# ログ出力（デバッグ用）
+log = "0.4"
+env_logger = "0.10"
+
+# 将来的に使うかもしれない、エラーハンドリングを楽にするツール
+anyhow = "1.0"
