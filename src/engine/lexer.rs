@@ -44,6 +44,12 @@ impl Lexer {
             '｛' | '{' => { self.read_char(); return Token::左中括弧; }
             '｝' | '}' => { self.read_char(); return Token::右中括弧; }
             '＝' | '=' => { self.read_char(); return Token::等号; }
+            // --- ここから追加 ---
+            '＋' | '+' => { self.read_char(); return Token::不明('+'); } 
+            '－' | '-' => { self.read_char(); return Token::不明('-'); }
+            '＊' | '*' => { self.read_char(); return Token::不明('*'); }
+            '／' | '/' => { self.read_char(); return Token::不明('/'); }
+            // --- ここまで追加 ---
             _ => {}
         }
 
