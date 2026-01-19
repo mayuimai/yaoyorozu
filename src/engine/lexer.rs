@@ -1,3 +1,5 @@
+// lexer.rs
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     もし,
@@ -21,6 +23,10 @@ pub enum Token {
     減算, // －
     乗算, // ＊
     除算, // ／
+    // ...
+    // ... 今までの単語 ...
+    記録,   // ← 追加
+    送信,   // ← 追加
     // ...
 }
 
@@ -67,12 +73,14 @@ impl Lexer {
         if self.is_japanese_alphabetic(ch) {
             let ident = self.read_identifier();
             return match ident.as_str() {
-                "もし" => Token::もし,
-                "ならば" => Token::ならば,
-                "さもなくば" => Token::さもなくば, // ←追加
+                "もし" => Token::もし,//if
+                "ならば" => Token::ならば,//if (){}
+                "さもなくば" => Token::さもなくば,// else{}
                 "繰返" => Token::繰返,
-                "表示" => Token::表示,
-                "終わり" => Token::終わり,         // ←追加
+                "表示" => Token::表示,//echo
+                "終わり" => Token::終わり,//endif end
+                "記録" => Token::記録,// git
+                "送信" => Token::送信,//git
                 _ => Token::識別子(ident),
             };
         }

@@ -1,3 +1,5 @@
+// parser.rs
+
 use crate::engine::lexer::{Lexer, Token};
 use crate::engine::ast::{命令, 式};
 
@@ -37,6 +39,16 @@ impl Parser {
         match self.current_token {
             Token::もし => self.もし文を解析(),
             Token::表示 => self.表示文を解析(),
+            // --- ここから追加 ---
+            Token::記録 => {
+                self.advance(); // 「記録」を読み飛ばして次へ
+                Some(命令::記録文)
+            }
+            Token::送信 => {
+                self.advance(); // 「送信」を読み飛ばして次へ
+                Some(命令::送信文)
+            }
+            // ------------------
             _ => None,
         }
     }

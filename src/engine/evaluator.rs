@@ -1,3 +1,5 @@
+//evaluator.rs 
+
 use crate::engine::ast::{命令, 式};
 use std::cell::RefCell;
 
@@ -33,7 +35,24 @@ impl Evaluator {
                 let mut buffer = self.出力バッファ.borrow_mut();
                 buffer.push_str(&format!("【出力】: {}\n", 値));
             }
-        }
+            // --- Git操作の魔法 ---
+            命令::記録文 => {
+                let mut buffer = self.出力バッファ.borrow_mut();
+                buffer.push_str("【記録中】: 変更を保存しています...\n");
+                let _ = std::process::Command::new("git").args(["add", "."]).output();
+                let _ = std::process::Command::new("git").args(["commit", "-m", "八百万エディタからの自動記録"]).output();
+                buffer.push_str("【完了】: 記録されました。🌸\n");
+            }
+            命令::送信文 => {
+                let mut buffer = self.出力バッファ.borrow_mut();
+                buffer.push_str("【送信中】: GitHubへ送り届けています...\n");
+                let output = std::process::Command::new("git").args(["push", "origin", "main"]).output();
+                match output {
+                    Ok(_) => buffer.push_str("【完了】: GitHubへ無事に届きました！🚀\n"),
+                    Err(e) => buffer.push_str(&format!("【失敗】: 送信できませんでした: {}\n", e)),
+                }
+            }
+        } // ← この match の閉じカッコが重要です！
     }
 
     fn 論理評価(&self, expr: 式) -> bool {

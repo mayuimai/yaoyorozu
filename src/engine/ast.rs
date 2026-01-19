@@ -1,3 +1,5 @@
+// ast.rs 
+
 #[derive(Debug, Clone)]
 pub enum 命令 {
     もし文 {
@@ -5,6 +7,8 @@ pub enum 命令 {
         実行内容: Vec<命令>,
     },
     表示文(式),
+    記録文, // ← これ！
+    送信文, // ← これ！
 }
 
 #[derive(Debug, Clone)]
