@@ -2,8 +2,10 @@
 pub enum Token {
     もし,
     ならば,
+    さもなくば, // ←追加
     繰返,
     表示,
+    終わり,     // ←追加
     識別子(String),
     数値(f64),
     等号,
@@ -14,6 +16,12 @@ pub enum Token {
     空白,
     不明(char),
     終端,
+    // ...
+    加算, // ＋
+    減算, // －
+    乗算, // ＊
+    除算, // ／
+    // ...
 }
 
 pub struct Lexer {
@@ -39,19 +47,18 @@ impl Lexer {
         let ch = self.input[self.position];
 
         match ch {
-            '（' | '(' => { self.read_char(); return Token::左括弧; }
-            '）' | ')' => { self.read_char(); return Token::右括弧; }
-            '｛' | '{' => { self.read_char(); return Token::左中括弧; }
-            '｝' | '}' => { self.read_char(); return Token::右中括弧; }
-            '＝' | '=' => { self.read_char(); return Token::等号; }
-            // --- ここから追加 ---
-            '＋' | '+' => { self.read_char(); return Token::不明('+'); } 
-            '－' | '-' => { self.read_char(); return Token::不明('-'); }
-            '＊' | '*' => { self.read_char(); return Token::不明('*'); }
-            '／' | '/' => { self.read_char(); return Token::不明('/'); }
-            // --- ここまで追加 ---
-            _ => {}
-        }
+    '（' | '(' => { self.read_char(); return Token::左括弧; }
+    '）' | ')' => { self.read_char(); return Token::右括弧; }
+    '｛' | '{' => { self.read_char(); return Token::左中括弧; }
+    '｝' | '}' => { self.read_char(); return Token::右中括弧; }
+    '＝' | '=' => { self.read_char(); return Token::等号; }
+    // --- カッコを外して、漢字を「減算」に修正しました ---
+    '＋' | '+' => { self.read_char(); return Token::加算; }
+    '－' | '-' => { self.read_char(); return Token::減算; }
+    '＊' | '*' => { self.read_char(); return Token::乗算; }
+    '／' | '/' => { self.read_char(); return Token::除算; }
+    _ => {}
+}
 
         if ch.is_ascii_digit() {
             return Token::数値(self.read_number());
@@ -62,8 +69,10 @@ impl Lexer {
             return match ident.as_str() {
                 "もし" => Token::もし,
                 "ならば" => Token::ならば,
+                "さもなくば" => Token::さもなくば, // ←追加
                 "繰返" => Token::繰返,
                 "表示" => Token::表示,
+                "終わり" => Token::終わり,         // ←追加
                 _ => Token::識別子(ident),
             };
         }
