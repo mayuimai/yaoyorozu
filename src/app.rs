@@ -170,7 +170,7 @@ impl eframe::App for YaoyorozuApp {
                     };
                     // --- エディタの背景を暗くする枠を追加 ---
                     egui::Frame::none()
-                        .fill(egui::Color32::from_rgb(22, 26, 26)) // 羊羹色
+                        .fill(hex("#161A1A")) // 羊羹色
                         .inner_margin(egui::Margin::same(10.0))    // 文字が端にくっつかないよう余白
                         .show(ui, |ui| {
                             ui.add(egui::TextEdit::multiline(&mut current_file.content)
