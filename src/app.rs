@@ -132,7 +132,10 @@ impl eframe::App for YaoyorozuApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             let current_file = &mut self.files[self.active_tab];
             
-            egui::ScrollArea::vertical().id_source("editor_scroll").show(ui, |ui| {
+            egui::ScrollArea::vertical()
+                .id_source("editor_scroll")
+                .max_height(ui.available_height() - 150.0)
+                .show(ui, |ui| {
                 ui.horizontal_top(|ui| {
                     let line_count = current_file.content.lines().count().max(1);
                     let mut line_numbers = String::new();
@@ -145,30 +148,63 @@ impl eframe::App for YaoyorozuApp {
                             .color(egui::Color32::from_gray(120))
                     ));
                     ui.separator();
-                    ui.add(egui::TextEdit::multiline(&mut current_file.content)
-                        .desired_rows(20)
-                        .font(egui::FontId::monospace(14.0))
-                        .desired_width(f32::INFINITY)
-                        .frame(false)
-                    );
+                    // --- 修正後のエディタ部分 ---
+                    let mut layouter = |ui: &egui::Ui, string: &str, wrap_width: f32| {
+                        let mut layout_job = crate::ui::syntax::highlight_yaoyorozu(ui, string);
+                        layout_job.wrap.max_width = wrap_width;
+                        ui.fonts(|f| f.layout_job(layout_job))
+                    };
+                    // --- エディタの背景を暗くする枠を追加 ---
+                    egui::Frame::none()
+                        .fill(egui::Color32::from_rgb(30, 30, 35)) // 墨色（すみいろ）
+                        .inner_margin(egui::Margin::same(10.0))    // 文字が端にくっつかないよう余白
+                        .show(ui, |ui| {
+                            ui.add(egui::TextEdit::multiline(&mut current_file.content)
+                                .desired_rows(20)
+                                .font(egui::FontId::monospace(14.0))
+                                .desired_width(f32::INFINITY)
+                                .min_size(ui.available_size()) // ← これを追加！画面の余っているスペース全部を黒くします
+                                .frame(false) // TextEdit自体の枠は消す
+                                .layouter(&mut layouter)
+                            );
+                        });
+
+                    
                 });
             });
 
             ui.add_space(10.0);
             ui.separator();
+            ui.add_space(5.0);
+
+            // ⚡ 実行エリア
             ui.horizontal(|ui| {
-                if ui.button("⚡ 実行する").clicked() {
+                ui.visuals_mut().widgets.hovered.bg_fill = egui::Color32::from_rgb(180, 80, 100); // ホバー時に苺色に
+                if ui.add(egui::Button::new(egui::RichText::new("⚡ 実行する").strong())).clicked() {
                     let レキシカ = Lexer::new(&current_file.content);
                     let mut パーサ = Parser::new(レキシカ);
                     let 構文木 = パーサ.解析する();
                     let 実行機 = Evaluator::new();
                     self.出力結果 = 実行機.実行(構文木);
                 }
-                ui.label("出力結果:");
+                ui.label(egui::RichText::new("出力結果:").color(egui::Color32::from_gray(180)));
             });
-            egui::ScrollArea::vertical().id_source("output_scroll").max_height(100.0).show(ui, |ui| {
-                ui.code(&self.出力結果);
-            });
+
+            ui.add_space(5.0);
+
+            // 📋 結果表示エリアを少し暗くして区別する
+            egui::Frame::none()
+                .fill(egui::Color32::from_gray(45)) // 少しだけ明るい灰色
+                .inner_margin(egui::Margin::same(8.0))
+                .rounding(4.0) // 角を少し丸く
+                .show(ui, |ui| {
+                    egui::ScrollArea::vertical()
+                        .id_source("output_scroll")
+                        .max_height(ui.available_height() - 150.0)
+                        .show(ui, |ui| {
+                            ui.add(egui::Label::new(&self.出力結果).wrap(true));
+                        });
+                });
         });
     }
 }
