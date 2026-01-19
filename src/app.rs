@@ -1,3 +1,6 @@
+//app.rs
+
+
 use eframe::egui;
 use crate::engine::{lexer::Lexer, parser::Parser, evaluator::Evaluator};
 use crate::ui_theme;
@@ -190,7 +193,7 @@ impl eframe::App for YaoyorozuApp {
 
             // ⚡ 実行エリア
             ui.horizontal(|ui| {
-                ui.visuals_mut().widgets.hovered.bg_fill = egui::Color32::from_rgb(180, 80, 100); // ホバー時に苺色に
+                ui.visuals_mut().widgets.hovered.bg_fill = egui::Color32::from_rgb(180, 80, 100);
                 if ui.add(egui::Button::new(egui::RichText::new("⚡ 実行する").strong())).clicked() {
                     let レキシカ = Lexer::new(&current_file.content);
                     let mut パーサ = Parser::new(レキシカ);
@@ -199,21 +202,32 @@ impl eframe::App for YaoyorozuApp {
                     self.出力結果 = 実行機.実行(構文木);
                 }
                 ui.label(egui::RichText::new("出力結果:").color(egui::Color32::from_gray(180)));
-            });
+
+                ui.separator();
+                
+                // --- ここ！一つの horizontal（横並び）の中にまとめます ---
+                ui.label("文字色:");
+                ui.color_edit_button_srgba(&mut self.選択中の色);
+            }); // ← ここで横並び終了
 
             ui.add_space(5.0);
 
             // 📋 結果表示エリアを少し暗くして区別する
             egui::Frame::none()
-                .fill(egui::Color32::from_gray(45)) // 少しだけ明るい灰色
-                .inner_margin(egui::Margin::same(8.0))
+                .fill(egui::Color32::from_gray(20)) // 少しだけ明るい灰色
+                .inner_margin(egui::Margin::same(10.0))
                 .rounding(4.0) // 角を少し丸く
                 .show(ui, |ui| {
                     egui::ScrollArea::vertical()
                         .id_source("output_scroll")
                         .max_height(ui.available_height() - 150.0)
                         .show(ui, |ui| {
-                            ui.add(egui::Label::new(&self.出力結果).wrap(true));
+                            // self.選択中の色 を反映させる！
+                            ui.add(egui::Label::new(
+                                egui::RichText::new(&self.出力結果)
+                                    .color(self.選択中の色)
+                                    .size(16.0)
+                            ));
                         });
                 });
         });
