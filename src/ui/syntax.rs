@@ -13,9 +13,9 @@ pub fn highlight_yaoyorozu(ui: &egui::Ui, code: &str) -> egui::text::LayoutJob {
         let color = if keywords.contains(&word.trim()) {
             egui::Color32::from_rgb(180, 80, 100)  // 苺色（いちごいろ）: 落ち着いたピンク
         } else if commands.contains(&word.trim()) {
-            egui::Color32::from_rgb(80, 120, 150)  // 縹色（はなだいろ）: 落ち着いた青
+            egui::Color32::from_rgb(152, 217, 142)  // 若緑: 落ち着いた青
         } else if word.trim().parse::<f64>().is_ok() {
-            egui::Color32::from_rgb(44, 79, 84)    // 高麗納戸（こうらいなんど）: 渋い緑
+            egui::Color32::from_rgb(71, 131, 132)    // 青碧: 渋い緑
         } else {
             ui.visuals().widgets.noninteractive.text_color() // 通常文字
         };
