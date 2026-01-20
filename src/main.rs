@@ -24,6 +24,6 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "八百万エディタ",
         options,
-        Box::new(|cc| Box::new(YaoyorozuApp::new(cc))),
+        Box::new(|cc| Ok(Box::new(YaoyorozuApp::new(cc)))),
     )
 }

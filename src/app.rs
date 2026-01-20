@@ -6,25 +6,18 @@ use crate::engine::{lexer::Lexer, parser::Parser, evaluator::Evaluator};
 use crate::ui_theme;
 use crate::ui::sidebar; // サイドバーモジュールを呼び出し
 
-// カラーコード（例: "#FFFFFF"）を読み取る魔法の道具
-fn hex(hex_str: &str) -> egui::Color32 {
-    let r = u8::from_str_radix(&hex_str[1..3], 16).unwrap_or(0);
-    let g = u8::from_str_radix(&hex_str[3..5], 16).unwrap_or(0);
-    let b = u8::from_str_radix(&hex_str[5..7], 16).unwrap_or(0);
-    egui::Color32::from_rgb(r, g, b)
-}
-
+#[derive(serde::Deserialize, serde::Serialize)]
 pub struct OpenedFile {
     pub name: String,
     pub content: String,
     pub path: Option<std::path::PathBuf>,
 }
-
+#[derive(serde::Deserialize, serde::Serialize)] // ← これを追加！
+#[serde(default)] // データがない場合はデフォルト値を使う
 pub struct YaoyorozuApp {
     files: Vec<OpenedFile>,
     active_tab: usize,
     出力結果: String,
-    // --- 追加：選んだ色を覚えておく場所 ---
     選択中の色: egui::Color32,
 }
 
@@ -58,9 +51,21 @@ impl eframe::App for YaoyorozuApp {
         }
         ui_theme::apply_japanese_visuals(ctx);
 
-        // --- 1. 自作タイトルバー兼ヘッダー ---
+        // 各パーツをメソッドとして呼び出す
+        self.render_header(ctx);
+        self.render_sidebar(ctx);
+        self.render_main_panel(ctx);
+    }
+    // --- ここを追加！ ---
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, eframe::APP_KEY, self);
+    }
+}
+// app.rs の一番最後に追加してください
+
+impl YaoyorozuApp {
+    fn render_header(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            // Paddingを追加：上下4px、左右8pxの余白
             egui::Frame::none()
                 .inner_margin(egui::Margin::symmetric(10.0, 8.0))
                 .show(ui, |ui| {
@@ -79,12 +84,12 @@ impl eframe::App for YaoyorozuApp {
                                 if let Some(path) = rfd::FileDialog::new()
                                     .add_filter("八百万ファイル", &["yaoyorozu", "txt"])
                                     .pick_file() {
-                                        if let Ok(content) = std::fs::read_to_string(&path) {
-                                            let name = path.file_name().unwrap().to_string_lossy().into_owned();
-                                            self.files.push(OpenedFile { name, content, path: Some(path) });
-                                            self.active_tab = self.files.len() - 1;
-                                        }
+                                    if let Ok(content) = std::fs::read_to_string(&path) {
+                                        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+                                        self.files.push(OpenedFile { name, content, path: Some(path) });
+                                        self.active_tab = self.files.len() - 1;
                                     }
+                                }
                                 ui.close_menu();
                             }
                             if ui.button("💾 保存").clicked() {
@@ -133,16 +138,18 @@ impl eframe::App for YaoyorozuApp {
                     });
                 });
         });
+    }
 
-        // --- 2. サイドバー (ファイル一覧) ---
+    fn render_sidebar(&mut self, ctx: &egui::Context) {
         egui::SidePanel::left("side_panel")
             .resizable(true)
             .default_width(150.0)
             .show(ctx, |ui| {
                 sidebar::show_file_list(ui, &self.files, &mut self.active_tab);
             });
+    }
 
-        // --- 3. メイン編集エリア ---
+    fn render_main_panel(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
             let current_file = &mut self.files[self.active_tab];
             
@@ -162,28 +169,26 @@ impl eframe::App for YaoyorozuApp {
                             .color(egui::Color32::from_gray(120))
                     ));
                     ui.separator();
-                    // --- 修正後のエディタ部分 ---
+
                     let mut layouter = |ui: &egui::Ui, string: &str, wrap_width: f32| {
                         let mut layout_job = crate::ui::syntax::highlight_yaoyorozu(ui, string);
                         layout_job.wrap.max_width = wrap_width;
                         ui.fonts(|f| f.layout_job(layout_job))
                     };
-                    // --- エディタの背景を暗くする枠を追加 ---
+
                     egui::Frame::none()
-                        .fill(hex("#161A1A")) // 羊羹色
-                        .inner_margin(egui::Margin::same(10.0))    // 文字が端にくっつかないよう余白
+                        .fill(ui_theme::hex("#161A1A")) 
+                        .inner_margin(egui::Margin::same(10.0))
                         .show(ui, |ui| {
                             ui.add(egui::TextEdit::multiline(&mut current_file.content)
                                 .desired_rows(20)
                                 .font(egui::FontId::monospace(14.0))
                                 .desired_width(f32::INFINITY)
-                                .min_size(ui.available_size()) // ← これを追加！画面の余っているスペース全部を黒くします
-                                .frame(false) // TextEdit自体の枠は消す
+                                .min_size(ui.available_size())
+                                .frame(false)
                                 .layouter(&mut layouter)
                             );
                         });
-
-                    
                 });
             });
 
@@ -191,7 +196,6 @@ impl eframe::App for YaoyorozuApp {
             ui.separator();
             ui.add_space(5.0);
 
-            // ⚡ 実行エリア
             ui.horizontal(|ui| {
                 ui.visuals_mut().widgets.hovered.bg_fill = egui::Color32::from_rgb(180, 80, 100);
                 if ui.add(egui::Button::new(egui::RichText::new("⚡ 実行する").strong())).clicked() {
@@ -202,27 +206,22 @@ impl eframe::App for YaoyorozuApp {
                     self.出力結果 = 実行機.実行(構文木);
                 }
                 ui.label(egui::RichText::new("出力結果:").color(egui::Color32::from_gray(180)));
-
                 ui.separator();
-                
-                // --- ここ！一つの horizontal（横並び）の中にまとめます ---
                 ui.label("文字色:");
                 ui.color_edit_button_srgba(&mut self.選択中の色);
-            }); // ← ここで横並び終了
+            });
 
             ui.add_space(5.0);
 
-            // 📋 結果表示エリアを少し暗くして区別する
             egui::Frame::none()
-                .fill(egui::Color32::from_gray(20)) // 少しだけ明るい灰色
+                .fill(egui::Color32::from_gray(20))
                 .inner_margin(egui::Margin::same(10.0))
-                .rounding(4.0) // 角を少し丸く
+                .rounding(4.0)
                 .show(ui, |ui| {
                     egui::ScrollArea::vertical()
                         .id_source("output_scroll")
                         .max_height(ui.available_height() - 150.0)
                         .show(ui, |ui| {
-                            // self.選択中の色 を反映させる！
                             ui.add(egui::Label::new(
                                 egui::RichText::new(&self.出力結果)
                                     .color(self.選択中の色)
