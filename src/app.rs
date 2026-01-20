@@ -1,4 +1,5 @@
 use crate::engine::{evaluator::Evaluator, lexer::Lexer, parser::Parser};
+use crate::ui::syntax;
 use crate::ui::sidebar;
 use crate::ui_theme;
 use eframe::egui;
@@ -17,6 +18,8 @@ pub struct YaoyorozuApp {
     選択中の札: usize,
     出力結果: String,
     選択中の色: egui::Color32,
+    起動装置: crate::engine::runner::起動装置,
+    git_コメント: String, // 🌟 1. ここに項目を追加！
 }
 
 impl YaoyorozuApp {
@@ -41,6 +44,8 @@ impl Default for YaoyorozuApp {
             選択中の札: 0,
             出力結果: "ここに結果が出ます".to_owned(),
             選択中の色: egui::Color32::WHITE,
+            起動装置: crate::engine::runner::起動装置::default(),
+            git_コメント: String::new(), // 🌟 2. ここで初期化！
         }
     }
 }
@@ -76,12 +81,12 @@ impl YaoyorozuApp {
                     ui.horizontal(|ui| {
                         ui.heading("🌸");
                         ui.add_space(8.0);
-                        //ui.separator();
 
                         ui.menu_button("ファイル", |ui| {
                             if ui.button("📂 開く").clicked() {
                                 if let Some(path) = rfd::FileDialog::new()
-                                    .add_filter("八百万ファイル", &["yaoyorozu", "txt"])
+                                    .add_filter("八百万の書物 (*.yaoyorozu, *.txt, *.fuda)", &["yaoyorozu", "txt", "fuda"])
+                                    .add_filter("すべてのファイル", &["*"])
                                     .pick_file() {
                                     if let Ok(content) = std::fs::read_to_string(&path) {
                                         let name = path.file_name().unwrap().to_string_lossy().into_owned();
@@ -98,7 +103,10 @@ impl YaoyorozuApp {
                             if ui.button("💾 保存").clicked() {
                                 let current_file = &mut self.開いている書物[self.選択中の札];
                                 if current_file.所在.is_none() {
-                                    if let Some(path) = rfd::FileDialog::new().save_file() {
+                                    if let Some(path) = rfd::FileDialog::new()
+                                        .set_file_name("新規の書物.fuda")
+                                        .add_filter("八百万の札", &["fuda", "yaoyorozu"])
+                                        .save_file() {
                                         current_file.所在 = Some(path);
                                     }
                                 }
@@ -109,8 +117,6 @@ impl YaoyorozuApp {
                                 ui.close_menu();
                             }
                         });
-
-                        //ui.separator();
 
                         egui::ScrollArea::horizontal().id_source("tab_scroll").show(ui, |ui| {
                             ui.horizontal(|ui| {
@@ -130,6 +136,18 @@ impl YaoyorozuApp {
                                 所在: None,
                             });
                             self.選択中の札 = self.開いている書物.len() - 1;
+                        }
+
+                        // 🌟 Git送信欄の追加
+                        ui.separator();
+                        ui.add(egui::TextEdit::singleline(&mut self.git_コメント)
+                            .hint_text("gitへの伝言...")
+                            .desired_width(150.0));
+
+                        if ui.button("🚀 送信").clicked() && !self.git_コメント.is_empty() {
+                            println!("Gitに送信命令: {}", self.git_コメント);
+                            // ※ ここで実際に git commit する処理は後ほど作り込みましょう！
+                            self.git_コメント.clear();
                         }
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -159,10 +177,12 @@ impl YaoyorozuApp {
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     ui.heading("縁側（出力エリア）");
+
                     if ui.button("▶ 起動").clicked() {
                         let ソースコード = &self.開いている書物[self.選択中の札].本文;
-                        self.出力結果 = crate::engine::実行(ソースコード);
+                        self.出力結果 = self.起動装置.実行する(ソースコード);
                     }
+
                     if ui.button("🗑 掃除").clicked() {
                         self.出力結果.clear();
                     }
@@ -181,62 +201,43 @@ impl YaoyorozuApp {
 
     fn 机_メインパネル(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            let current_file = &mut self.開いている書物[self.選択中の札];
+            let (名前, 本文) = {
+                let f = &self.開いている書物[self.選択中の札];
+                (f.名前.clone(), f.本文.clone())
+            };
 
             ui.vertical(|ui| {
-                ui.label(format!("編集中の書物: {}", current_file.名前));
+                ui.label(format!("編集中の書物: {}", 名前));
                 
-                let mut theme = ui_theme::八百万の装束::new();
-                theme.set_color(self.選択中の色);
-
                 let mut layouter = |ui: &egui::Ui, string: &str, wrap_width: f32| {
-                    let layout_job = theme.layout(ui, string);
-                    let mut job = layout_job;
-                    job.wrap.max_width = wrap_width;
-                    ui.fonts(|f| f.layout_job(job))
+                    let mut layout_job = crate::ui::syntax::highlight_yaoyorozu(ui, string);
+                    layout_job.wrap.max_width = wrap_width;
+                    ui.fonts(|f| f.layout_job(layout_job))
                 };
 
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    // 🌟 エディタの margin と合わせる
                     ui.add_space(11.0);
 
                     ui.horizontal_top(|ui| {
-                        // 1. 行番号エリア
                         ui.add_space(10.0);
                         
-                        let line_count = current_file.本文.lines().count().max(1);
-                        let mut job = egui::text::LayoutJob::default();
-                        for i in 1..=line_count {
-                            job.append(
-                                &format!("{}\n", i),
-                                0.0,
-                                egui::TextFormat {
-                                    font_id: egui::FontId::monospace(14.0),
-                                    color: egui::Color32::from_gray(100),
-                                    line_height: Some(21.0), // 🌟 21.0 で固定
-                                    ..Default::default()
-                                },
-                            );
-                        }
-                        // --- ここから書き換え ---
+                        let line_count = 本文.lines().count().max(1);
+                        let job = Self::行番号の生成(line_count);
+                        
                         ui.allocate_ui(egui::vec2(30.0, 0.0), |ui| {
                             egui::Frame::none()
                                 .inner_margin(egui::Margin {
-                                    top: 10.0,    // 🌟 ここで行番号だけ「2ピクセル」下に下げます
-                                    left: 0.0,
-                                    right: 0.0,
-                                    bottom: 0.0,
+                                    top: 10.0,
+                                    ..Default::default()
                                 })
                                 .show(ui, |ui| {
                                     ui.add(egui::Label::new(job).wrap());
                                 });
                         });
-                        // --- ここまで ---
 
                         ui.add_space(8.0);
-                        //ui.separator();
 
-                        // 2. エディタエリア
+                        let current_file = &mut self.開いている書物[self.選択中の札];
                         ui.add_sized(
                             ui.available_size(),
                             egui::TextEdit::multiline(&mut current_file.本文)
@@ -251,5 +252,22 @@ impl YaoyorozuApp {
                 });
             });
         });
+    }
+
+    fn 行番号の生成(line_count: usize) -> egui::text::LayoutJob {
+        let mut job = egui::text::LayoutJob::default();
+        for i in 1..=line_count {
+            job.append(
+                &format!("{}\n", i),
+                0.0,
+                egui::TextFormat {
+                    font_id: egui::FontId::monospace(14.0),
+                    color: egui::Color32::from_gray(100),
+                    line_height: Some(21.0),
+                    ..Default::default()
+                },
+            );
+        }
+        job
     }
 }

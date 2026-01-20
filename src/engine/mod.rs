@@ -3,6 +3,7 @@ pub mod ast;
 pub mod evaluator;
 pub mod lexer;
 pub mod parser;
+pub mod runner;
 
 // 窓口（公開関数）を一つ作っておく
 pub fn 実行(ソースコード: &str) -> String {
