@@ -1,18 +1,15 @@
 [package]
 name = "yaoyorozu"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
-eframe = { version = "0.28.1", features = ["persistence"] } # persistence を追加
-serde = { version = "1.0", features = ["derive"] }          # 追加
-
-# ログ出力（デバッグ用）
+eframe = "0.28.1"
+egui = "0.28.1"
+egui_extras = { version = "0.28.1", features = ["all_loaders", "gif"] }
+image = { version = "0.25", features = ["default", "gif"] }
+serde = { version = "1", features = ["derive"] }
+rfd = "0.14"
 log = "0.4"
 env_logger = "0.10"
-
-# 将来的に使うかもしれない、エラーハンドリングを楽にするツール
 anyhow = "1.0"
-
-#ファイルの参照、保存
-rfd = "0.14"

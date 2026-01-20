@@ -20,12 +20,16 @@ pub struct YaoyorozuApp {
     選択中の色: egui::Color32,
     起動装置: crate::engine::runner::起動装置,
     git_コメント: String, // 🌟 1. ここに項目を追加！
+    #[serde(skip)] // 🌟 これを足してください！
+    タイマー: crate::appdoc::orichy_timer::OriTimer, // 🌟 追加！
 }
 
 impl YaoyorozuApp {
-    pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-        if let Some(storage) = _cc.storage {
-            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        egui_extras::install_image_loaders(&cc.egui_ctx);
+        if let Some(storage) = cc.storage {
+           //return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+        return Self::default()
         }
         Self::default()
     }
@@ -46,24 +50,52 @@ impl Default for YaoyorozuApp {
             選択中の色: egui::Color32::WHITE,
             起動装置: crate::engine::runner::起動装置::default(),
             git_コメント: String::new(), // 🌟 2. ここで初期化！
+            タイマー: crate::appdoc::orichy_timer::OriTimer::new(), // 🌟 追加！
         }
     }
 }
 
 impl eframe::App for YaoyorozuApp {
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
+        //eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if ctx.fonts(|f| f.families().len() < 3) {
             ui_theme::setup_custom_fonts(ctx);
+            egui_extras::install_image_loaders(ctx);
         }
 
         self.屋根_ヘッダー(ctx);
         self.引出_サイドバー(ctx);
         self.縁側_出力エリア(ctx);
         self.机_メインパネル(ctx);
+        // 64行目付近
+        //ctx.forget_all_images();
+
+        self.タイマー.更新(); 
+
+        if self.タイマー.状態を教える() {
+            // 休憩が必要な時だけ、画面の一番下に特別なエリアを出します
+            egui::TopBottomPanel::bottom("timer_panel").show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    // 🌟 include_image! のパスから ../ を取って assets/すずめ.gif にします
+                    ui.add(
+                        egui::Image::new(egui::include_image!("../assets/すずめ.gif"))
+                            .max_width(32.0)
+                    );
+
+                    ui.add_space(8.0);
+                    ui.heading("繭さん、そろそろ腰を伸ばして休憩しませんか？");
+                    
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui.button("休憩したよ").clicked() {
+                            self.タイマー.休憩した();
+                        }
+                    });
+                });
+            }); // 🌟 最後にセミコロン「;」が必要です
+        }
     }
 }
 

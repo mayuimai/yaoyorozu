@@ -9,7 +9,9 @@ mod ui; // サイドバーなど
 // 3. 最後にそれらをまとめる「心臓部」
 mod app; // アプリ全体の統合
 //-----------------------------------//
-
+pub mod appdoc {
+    pub mod orichy_timer;
+}
 use app::YaoyorozuApp;
 use eframe::egui;
 
