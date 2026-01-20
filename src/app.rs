@@ -1,5 +1,3 @@
-// src/app.rs
-
 use crate::engine::{evaluator::Evaluator, lexer::Lexer, parser::Parser};
 use crate::ui::sidebar;
 use crate::ui_theme;
@@ -23,7 +21,6 @@ pub struct YaoyorozuApp {
 
 impl YaoyorozuApp {
     pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-        // 保存された状態があれば復元し、なければデフォルトを返します
         if let Some(storage) = _cc.storage {
             return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         }
@@ -37,7 +34,7 @@ impl Default for YaoyorozuApp {
             開いている書物: vec![
                 開かれた書物 {
                     名前: "新規ファイル1".to_owned(),
-                    本文: "もし 10 ＝ 10 ならば ｛ 表示 100 ＋ 200 ｝".to_owned(),
+                    本文: "※ ここに言霊を記してください\nもし 10 ＝ 10 ならば ｛ 表示 100 ＋ 200 ｝".to_owned(),
                     所在: None,
                 },
             ],
@@ -49,7 +46,6 @@ impl Default for YaoyorozuApp {
 }
 
 impl eframe::App for YaoyorozuApp {
-    // 状態を保存する魔法（アプリ終了時などに呼ばれます）
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
         eframe::set_value(storage, eframe::APP_KEY, self);
     }
@@ -58,19 +54,10 @@ impl eframe::App for YaoyorozuApp {
         if ctx.fonts(|f| f.families().len() < 3) {
             ui_theme::setup_custom_fonts(ctx);
         }
-        // 🌟 この行の頭に「//」をつけて、無効化してください
-        // ui_theme::apply_japanese_visuals(ctx);
 
-        // 1. 屋根（上）
         self.屋根_ヘッダー(ctx);
-
-        // 2. 引出（左）
         self.引出_サイドバー(ctx);
-
-        // 3. 縁側（下）
         self.縁側_出力エリア(ctx);
-
-        // 4. 机（中央）：最後にかくことで残りの領域を占有します
         self.机_メインパネル(ctx);
     }
 }
@@ -89,7 +76,7 @@ impl YaoyorozuApp {
                     ui.horizontal(|ui| {
                         ui.heading("🌸");
                         ui.add_space(8.0);
-                        ui.separator();
+                        //ui.separator();
 
                         ui.menu_button("ファイル", |ui| {
                             if ui.button("📂 開く").clicked() {
@@ -123,7 +110,7 @@ impl YaoyorozuApp {
                             }
                         });
 
-                        ui.separator();
+                        //ui.separator();
 
                         egui::ScrollArea::horizontal().id_source("tab_scroll").show(ui, |ui| {
                             ui.horizontal(|ui| {
@@ -166,19 +153,28 @@ impl YaoyorozuApp {
     }
 
     fn 縁側_出力エリア(&mut self, ctx: &egui::Context) {
-        egui::TopBottomPanel::bottom("縁側パネル")
+        egui::TopBottomPanel::bottom("output_panel")
             .resizable(true)
-            .default_height(100.0)
+            .default_height(150.0)
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    ui.heading("縁側（出力）");
+                    ui.heading("縁側（出力エリア）");
                     if ui.button("▶ 起動").clicked() {
-                        self.出力結果 = "八百万のエンジン、起動しました。".to_string();
+                        let ソースコード = &self.開いている書物[self.選択中の札].本文;
+                        self.出力結果 = crate::engine::実行(ソースコード);
+                    }
+                    if ui.button("🗑 掃除").clicked() {
+                        self.出力結果.clear();
                     }
                 });
-                ui.separator();
+                
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    ui.label(&self.出力結果);
+                    ui.add(
+                        egui::Label::new(
+                            egui::RichText::new(&self.出力結果)
+                                .font(egui::FontId::monospace(14.0))
+                        ).wrap()
+                    );
                 });
             });
     }
@@ -200,26 +196,45 @@ impl YaoyorozuApp {
                     ui.fonts(|f| f.layout_job(job))
                 };
 
-                // app.rs 200行目付近：机_メインパネルの中身
-
                 egui::ScrollArea::vertical().show(ui, |ui| {
+                    // 🌟 エディタの margin と合わせる
+                    ui.add_space(11.0);
+
                     ui.horizontal_top(|ui| {
-                        // 1. 行番号エリア（グレーで数字を並べる）
+                        // 1. 行番号エリア
+                        ui.add_space(10.0);
+                        
                         let line_count = current_file.本文.lines().count().max(1);
-                        let mut line_numbers_str = String::new();
+                        let mut job = egui::text::LayoutJob::default();
                         for i in 1..=line_count {
-                            line_numbers_str.push_str(&format!("{}\n", i));
+                            job.append(
+                                &format!("{}\n", i),
+                                0.0,
+                                egui::TextFormat {
+                                    font_id: egui::FontId::monospace(14.0),
+                                    color: egui::Color32::from_gray(100),
+                                    line_height: Some(21.0), // 🌟 21.0 で固定
+                                    ..Default::default()
+                                },
+                            );
                         }
+                        // --- ここから書き換え ---
+                        ui.allocate_ui(egui::vec2(30.0, 0.0), |ui| {
+                            egui::Frame::none()
+                                .inner_margin(egui::Margin {
+                                    top: 10.0,    // 🌟 ここで行番号だけ「2ピクセル」下に下げます
+                                    left: 0.0,
+                                    right: 0.0,
+                                    bottom: 0.0,
+                                })
+                                .show(ui, |ui| {
+                                    ui.add(egui::Label::new(job).wrap());
+                                });
+                        });
+                        // --- ここまで ---
 
-                        ui.add(
-                            egui::Label::new(
-                                egui::RichText::new(line_numbers_str)
-                                    .font(egui::FontId::monospace(14.0))
-                                    .color(egui::Color32::from_gray(100))
-                            )
-                        );
-
-                        ui.separator(); // 縦の仕切り線
+                        ui.add_space(8.0);
+                        //ui.separator();
 
                         // 2. エディタエリア
                         ui.add_sized(
@@ -228,6 +243,7 @@ impl YaoyorozuApp {
                                 .font(egui::TextStyle::Monospace)
                                 .code_editor()
                                 .lock_focus(true)
+                                .margin(egui::vec2(10.0, 10.0))
                                 .desired_width(f32::INFINITY)
                                 .layouter(&mut layouter),
                         );

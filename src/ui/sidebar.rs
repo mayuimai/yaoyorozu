@@ -5,7 +5,7 @@ use eframe::egui;
 pub fn show_file_list(ui: &mut egui::Ui, files: &[crate::app::開かれた書物], active_tab: &mut usize) {
     ui.add_space(4.0);
     ui.heading("ファイル一覧");
-    ui.separator();
+    //ui.separator();
 
     egui::ScrollArea::vertical().show(ui, |ui| {
         ui.vertical(|ui| {

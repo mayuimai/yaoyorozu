@@ -20,8 +20,10 @@ pub fn highlight_yaoyorozu(ui: &egui::Ui, code: &str) -> egui::text::LayoutJob {
     let keywords = ["もし", "ならば", "または", "繰り返す", "｛", "｝"];
     let commands = ["表示", "待機", "取得"];
 
-    for word in code.split_inclusive(|c: char| !c.is_alphanumeric() && c != '＿') {
-        let color = if keywords.contains(&word.trim()) {
+    for word in code.split_inclusive(|c: char| !c.is_alphanumeric() && c != '＿' && c != '※') {
+        let color = if word.starts_with('※') {
+            egui::Color32::from_gray(120) // 🌟 薄墨色（コメント用）
+        } else if keywords.contains(&word.trim()) {
             hex("#B45064") // 苺色
         } else if commands.contains(&word.trim()) {
             hex("#98D98E") // 若緑
@@ -37,6 +39,8 @@ pub fn highlight_yaoyorozu(ui: &egui::Ui, code: &str) -> egui::text::LayoutJob {
             egui::TextFormat {
                 font_id: egui::FontId::monospace(14.0),
                 color,
+                // 🌟 行間を 1.5倍（21.0px）に設定します
+                line_height: Some(21.0),
                 ..Default::default()
             },
         );
