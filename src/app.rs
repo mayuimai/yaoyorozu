@@ -145,11 +145,31 @@ impl YaoyorozuApp {
                             .desired_width(150.0));
 
                         if ui.button("🚀 送信").clicked() && !self.git_コメント.is_empty() {
-                            println!("Gitに送信命令: {}", self.git_コメント);
-                            // ※ ここで実際に git commit する処理は後ほど作り込みましょう！
+                            // RustからWindowsのコマンドプロンプトを介してGitを操作します
+                            use std::process::Command;
+
+                            let msg = self.git_コメント.clone();
+                            
+                            // 1. git add .
+                            let _ = Command::new("git").arg("add").arg(".").status();
+                            
+                            // 2. git commit -m "メッセージ"
+                            let status = Command::new("git")
+                                .arg("commit")
+                                .arg("-m")
+                                .arg(&msg)
+                                .status();
+
+                            // 3. git push (もしリモート設定済みなら)
+                            if status.is_ok() {
+                                let _ = Command::new("git").arg("push").status();
+                                self.出力結果 = format!("✨ Gitへ送信完了しました：{}", msg);
+                            } else {
+                                self.出力結果 = "⚠️ コミットに失敗しました。変更がないか、Gitの設定を確認してください。".to_string();
+                            }
+
                             self.git_コメント.clear();
                         }
-
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             ui.add_space(3.0);
                             if ui.button("❌").clicked() {
