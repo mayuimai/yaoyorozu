@@ -7,7 +7,7 @@ pub enum Token {
     さもなくば, // ←追加
     繰返,
     表示,
-    終わり,     // ←追加
+    終わり, // ←追加
     識別子(String),
     数値(f64),
     等号,
@@ -25,9 +25,9 @@ pub enum Token {
     除算, // ／
     // ...
     // ... 今までの単語 ...
-    記録,   // ← 追加
-    送信,   // ← 追加
-    // ...
+    記録, // ← 追加
+    送信, // ← 追加
+          // ...
 }
 
 pub struct Lexer {
@@ -53,18 +53,45 @@ impl Lexer {
         let ch = self.input[self.position];
 
         match ch {
-    '（' | '(' => { self.read_char(); return Token::左括弧; }
-    '）' | ')' => { self.read_char(); return Token::右括弧; }
-    '｛' | '{' => { self.read_char(); return Token::左中括弧; }
-    '｝' | '}' => { self.read_char(); return Token::右中括弧; }
-    '＝' | '=' => { self.read_char(); return Token::等号; }
-    // --- カッコを外して、漢字を「減算」に修正しました ---
-    '＋' | '+' => { self.read_char(); return Token::加算; }
-    '－' | '-' => { self.read_char(); return Token::減算; }
-    '＊' | '*' => { self.read_char(); return Token::乗算; }
-    '／' | '/' => { self.read_char(); return Token::除算; }
-    _ => {}
-}
+            '（' | '(' => {
+                self.read_char();
+                return Token::左括弧;
+            }
+            '）' | ')' => {
+                self.read_char();
+                return Token::右括弧;
+            }
+            '｛' | '{' => {
+                self.read_char();
+                return Token::左中括弧;
+            }
+            '｝' | '}' => {
+                self.read_char();
+                return Token::右中括弧;
+            }
+            '＝' | '=' => {
+                self.read_char();
+                return Token::等号;
+            }
+            // --- カッコを外して、漢字を「減算」に修正しました ---
+            '＋' | '+' => {
+                self.read_char();
+                return Token::加算;
+            }
+            '－' | '-' => {
+                self.read_char();
+                return Token::減算;
+            }
+            '＊' | '*' => {
+                self.read_char();
+                return Token::乗算;
+            }
+            '／' | '/' => {
+                self.read_char();
+                return Token::除算;
+            }
+            _ => {}
+        }
 
         if ch.is_ascii_digit() {
             return Token::数値(self.read_number());
@@ -73,14 +100,14 @@ impl Lexer {
         if self.is_japanese_alphabetic(ch) {
             let ident = self.read_identifier();
             return match ident.as_str() {
-                "もし" => Token::もし,//if
-                "ならば" => Token::ならば,//if (){}
-                "さもなくば" => Token::さもなくば,// else{}
+                "もし" => Token::もし,             //if
+                "ならば" => Token::ならば,         //if (){}
+                "さもなくば" => Token::さもなくば, // else{}
                 "繰返" => Token::繰返,
-                "表示" => Token::表示,//echo
-                "終わり" => Token::終わり,//endif end
-                "記録" => Token::記録,// git
-                "送信" => Token::送信,//git
+                "表示" => Token::表示,     //echo
+                "終わり" => Token::終わり, //endif end
+                "記録" => Token::記録,     // git
+                "送信" => Token::送信,     //git
                 _ => Token::識別子(ident),
             };
         }
@@ -105,7 +132,9 @@ impl Lexer {
 
     fn read_identifier(&mut self) -> String {
         let start = self.position;
-        while self.position < self.input.len() && self.is_japanese_alphabetic(self.input[self.position]) {
+        while self.position < self.input.len()
+            && self.is_japanese_alphabetic(self.input[self.position])
+        {
             self.read_char();
         }
         self.input[start..self.position].iter().collect()
@@ -113,7 +142,9 @@ impl Lexer {
 
     fn read_number(&mut self) -> f64 {
         let start = self.position;
-        while self.position < self.input.len() && (self.input[self.position].is_ascii_digit() || self.input[self.position] == '.') {
+        while self.position < self.input.len()
+            && (self.input[self.position].is_ascii_digit() || self.input[self.position] == '.')
+        {
             self.read_char();
         }
         let s: String = self.input[start..self.position].iter().collect();

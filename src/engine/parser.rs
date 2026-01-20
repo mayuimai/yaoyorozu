@@ -1,7 +1,7 @@
 // parser.rs
 
-use crate::engine::lexer::{Lexer, Token};
 use crate::engine::ast::{命令, 式};
+use crate::engine::lexer::{Lexer, Token};
 
 pub struct Parser {
     lexer: Lexer,
@@ -63,11 +63,13 @@ impl Parser {
         self.advance(); // 「もし」を飛ばす
         let 条件 = self.式を解析する()?;
 
-        if self.current_token != Token::ならば { return None; }
+        if self.current_token != Token::ならば {
+            return None;
+        }
         self.advance(); // 「ならば」を飛ばす
 
         let mut 実行内容 = Vec::new();
-        
+
         // 「終わり」が来るまで命令を読み込み続けるように変更
         while self.current_token != Token::終わり && self.current_token != Token::終端 {
             if let Some(cmd) = self.命令を解析する() {
@@ -76,12 +78,14 @@ impl Parser {
                 self.advance();
             }
         }
-        
+
         if self.current_token == Token::終わり {
             self.advance(); // 「終わり」を飛ばす
         }
 
-        Some(命令::もし文 { 条件, 実行内容 })
+        Some(命令::もし文 {
+            条件, 実行内容
+        })
     }
 
     // 優先順位： 1:比較(＝) , 2:加減(＋, －) , 3:乗除(＊, ／)
@@ -107,7 +111,11 @@ impl Parser {
     fn 加減の解析(&mut self) -> Option<式> {
         let mut 左辺 = self.乗除の解析()?;
         while self.current_token == Token::加算 || self.current_token == Token::減算 {
-            let op = if self.current_token == Token::加算 { '+' } else { '-' };
+            let op = if self.current_token == Token::加算 {
+                '+'
+            } else {
+                '-'
+            };
             self.advance();
             let 右辺 = self.乗除の解析()?;
             左辺 = 式::計算 {
@@ -139,9 +147,13 @@ impl Parser {
 
         // 2. その後に「＊」や「／」が続く限り、計算を繋げていく
         while self.current_token == Token::乗算 || self.current_token == Token::除算 {
-            let op = if self.current_token == Token::乗算 { '*' } else { '/' };
+            let op = if self.current_token == Token::乗算 {
+                '*'
+            } else {
+                '/'
+            };
             self.advance(); // 演算子を読んだので次へ
-            
+
             let 右辺 = match self.current_token {
                 Token::数値(n) => {
                     self.advance();
@@ -150,7 +162,9 @@ impl Parser {
                 Token::左括弧 => {
                     self.advance();
                     let 内部 = self.式を解析する()?;
-                    if self.current_token == Token::右括弧 { self.advance(); }
+                    if self.current_token == Token::右括弧 {
+                        self.advance();
+                    }
                     内部
                 }
                 _ => return None,

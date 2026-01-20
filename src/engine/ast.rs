@@ -1,4 +1,4 @@
-// ast.rs 
+// ast.rs
 
 #[derive(Debug, Clone)]
 pub enum 命令 {
