@@ -9,6 +9,7 @@ pub enum Token {
     表示,
     終わり, // ←追加
     識別子(String),
+    文字列(String), // ← これを追加！
     数値(f64),
     等号,
     左括弧,
@@ -53,6 +54,20 @@ impl Lexer {
         let ch = self.input[self.position];
 
         match ch {
+            '『' => {
+            self.read_char(); // 『 を読み飛ばす
+            let start = self.position;
+            while self.position < self.input.len() && self.input[self.position] != '』' {
+                self.read_char();
+            }
+            // 中身を取り出す（全角数字も変換せず、ありのまま）
+            let text: String = self.input[start..self.position].iter().collect();
+            if self.position < self.input.len() {
+                self.read_char(); // 』 を読み飛ばす
+            }
+            return Token::文字列(text);
+            }
+
             '（' | '(' => {
                 self.read_char();
                 return Token::左括弧;
@@ -93,7 +108,9 @@ impl Lexer {
             _ => {}
         }
 
-        if ch.is_ascii_digit() {
+        // 95行目付近
+        // if ch.is_ascii_digit() { を以下に書き換え
+        if ch.is_ascii_digit() || ('０'..='９').contains(&ch) {
             return Token::数値(self.read_number());
         }
 
@@ -140,14 +157,28 @@ impl Lexer {
         self.input[start..self.position].iter().collect()
     }
 
-    fn read_number(&mut self) -> f64 {
-        let start = self.position;
-        while self.position < self.input.len()
-            && (self.input[self.position].is_ascii_digit() || self.input[self.position] == '.')
-        {
-            self.read_char();
-        }
-        let s: String = self.input[start..self.position].iter().collect();
-        s.parse().unwrap_or(0.0)
+    // 130行目付近
+fn read_number(&mut self) -> f64 {
+    let start = self.position;
+    while self.position < self.input.len()
+        && (self.input[self.position].is_ascii_digit() 
+            || ('０'..='９').contains(&self.input[self.position]) // 全角数字を追加
+            || self.input[self.position] == '.'
+            || self.input[self.position] == '．') // 全角ドットもついでに対応
+    {
+        self.read_char();
     }
+    let s: String = self.input[start..self.position].iter().collect();
+    
+    // 全角を半角に置換してパースする
+    let s_half = s.chars().map(|c| {
+        match c {
+            '０'..='９' => ((c as u32) - 0xFF10 + 0x0030) as u8 as char,
+            '．' => '.',
+            _ => c,
+        }
+    }).collect::<String>();
+
+    s_half.parse().unwrap_or(0.0)
+}
 }

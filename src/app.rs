@@ -253,13 +253,12 @@ impl YaoyorozuApp {
 
     fn 机_メインパネル(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            let (名前, 本文) = {
-                let f = &self.開いている書物[self.選択中の札];
-                (f.名前.clone(), f.本文.clone())
-            };
+            // ここで先に「今編集しているファイル」を取り出します
+            let current_file = &mut self.開いている書物[self.選択中の札];
 
             ui.vertical(|ui| {
-                ui.label(format!("編集中の書物: {}", 名前));
+                // 名前を表示（エラーE0425の解消）
+                ui.label(format!("編集中の書物: {}", current_file.名前));
                 
                 let mut layouter = |ui: &egui::Ui, string: &str, wrap_width: f32| {
                     let mut layout_job = crate::ui::syntax::highlight_yaoyorozu(ui, string);
@@ -273,7 +272,8 @@ impl YaoyorozuApp {
                     ui.horizontal_top(|ui| {
                         ui.add_space(10.0);
                         
-                        let line_count = 本文.lines().count().max(1);
+                        // 行番号の計算（エラーE0425の解消）
+                        let line_count = current_file.本文.lines().count().max(1);
                         let job = Self::行番号の生成(line_count);
                         
                         ui.allocate_ui(egui::vec2(30.0, 0.0), |ui| {
@@ -289,7 +289,7 @@ impl YaoyorozuApp {
 
                         ui.add_space(8.0);
 
-                        let current_file = &mut self.開いている書物[self.選択中の札];
+                        // エディタ本体（ここで直接 current_file.本文 を編集します）
                         ui.add_sized(
                             ui.available_size(),
                             egui::TextEdit::multiline(&mut current_file.本文)
@@ -298,7 +298,14 @@ impl YaoyorozuApp {
                                 .lock_focus(true)
                                 .margin(egui::vec2(10.0, 10.0))
                                 .desired_width(f32::INFINITY)
-                                .layouter(&mut layouter),
+                                .layouter(&mut layouter)
+                                // 👇 ここから書き換え
+.return_key(if ctx.input(|i| i.events.iter().any(|e| matches!(e, egui::Event::Ime(_)))) {
+    None // IMEイベントが発生している間は、エンターによる確定をエディタに渡さない
+} else {
+    Some(egui::KeyboardShortcut::new(egui::Modifiers::NONE, egui::Key::Enter))
+}),
+// 👆 ここまで
                         );
                     });
                 });

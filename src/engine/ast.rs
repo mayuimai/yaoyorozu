@@ -14,6 +14,7 @@ pub enum 命令 {
 #[derive(Debug, Clone)]
 pub enum 式 {
     数値(f64),
+    文字列(String), // ← これを追加！2026-01-20:stringthtrue
     // 比較（＝, ＞, ＜ など）
     比較 {
         左辺: Box<式>,

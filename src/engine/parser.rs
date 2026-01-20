@@ -134,6 +134,12 @@ impl Parser {
                 self.advance(); // 数値を読んだので次へ
                 式::数値(n)
             }
+            // 👇 ここに文字列の処理を追加！
+            Token::文字列(ref s) => {
+                let text = s.clone();
+                self.advance();
+                式::文字列(text)
+            }
             Token::左括弧 => {
                 self.advance(); // 「（」を読んだので次へ
                 let 内部の式 = self.式を解析する()?;
