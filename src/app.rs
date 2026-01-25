@@ -1,4 +1,3 @@
-use crate::engine::{evaluator::Evaluator, lexer::Lexer, parser::Parser};
 use crate::ui::syntax;
 use crate::ui::sidebar;
 use crate::ui_theme;
