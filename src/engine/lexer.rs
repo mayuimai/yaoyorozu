@@ -1,6 +1,6 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    数値(f64),
+    数値(f64), // 🌟 ここを直しました！（正しい「値」です）
     文字列(String),
     識別子(String),
     
@@ -10,7 +10,7 @@ pub enum Token {
     変数,
     時刻, 日時, 曜日,
 
-    // 記号（parser.rsが期待している名前）
+    // 記号
     等号,       // =
     大なり,     // >
     小なり,     // <
@@ -39,7 +39,6 @@ impl Lexer {
         }
     }
 
-    // parser.rs が呼んでいる名前に合わせました！
     pub fn 次のトークンを出す(&mut self) -> Token {
         self.空白をスキップ();
 
@@ -48,6 +47,12 @@ impl Lexer {
         }
 
         let ch = self.input[self.position];
+
+        // コメント（#）を無視する処理
+        if ch == '#' {
+            self.コメントをスキップ();
+            return self.次のトークンを出す();
+        }
 
         // 数字
         if ch.is_digit(10) || "０１２３４５６７８９".contains(ch) {
@@ -93,7 +98,6 @@ impl Lexer {
             '{' | '｛' => { self.position += 1; Token::左中括弧 },
             '}' | '｝' => { self.position += 1; Token::右中括弧 },
             _ => {
-                // 知らない文字はスキップして次へ
                 self.position += 1;
                 self.次のトークンを出す()
             }
@@ -108,6 +112,15 @@ impl Lexer {
             } else {
                 break;
             }
+        }
+    }
+
+    fn コメントをスキップ(&mut self) {
+        while self.position < self.input.len() {
+            if self.input[self.position] == '\n' {
+                break;
+            }
+            self.position += 1;
         }
     }
 
@@ -158,10 +171,10 @@ impl Lexer {
     }
 
     fn is_identifier_start(ch: char) -> bool {
-        !ch.is_digit(10) && !" 「」=+-*/><(){}\t\n\r　＝＋ー×÷＞＜（）｛｝".contains(ch)
+        !ch.is_digit(10) && !"# 「」=+-*/><(){}\t\n\r　＝＋ー×÷＞＜（）｛｝".contains(ch)
     }
 
     fn is_identifier_char(ch: char) -> bool {
-        !ch.is_whitespace() && !"「」=+-*/><(){}\t\n\r　＝＋ー×÷＞＜（）｛｝".contains(ch)
+        !ch.is_whitespace() && !"# 「」=+-*/><(){}\t\n\r　＝＋ー×÷＞＜（）｛｝".contains(ch)
     }
 }
