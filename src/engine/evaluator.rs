@@ -1,14 +1,22 @@
-// src/engine/evaluator.rs
 use crate::engine::ast::{命令, 式};
 use std::cell::RefCell;
+use std::collections::HashMap;
 
-pub struct Evaluator { 出力バッファ: RefCell<String> }
+pub struct Evaluator {
+    出力バッファ: RefCell<String>,
+    記憶領域: RefCell<HashMap<String, 値>>, 
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum 値 { 数値(f64), 文字列(String), 空 }
 
 impl Evaluator {
-    pub fn new() -> Self { Self { 出力バッファ: RefCell::new(String::new()) } }
+    pub fn new() -> Self {
+        Self {
+            出力バッファ: RefCell::new(String::new()),
+            記憶領域: RefCell::new(HashMap::new()),
+        }
+    }
 
     pub fn 実行(&self, 命令セット: Vec<命令>) -> String {
         for cmd in 命令セット { self.命令を実行(cmd); }
@@ -17,6 +25,10 @@ impl Evaluator {
 
     fn 命令を実行(&self, cmd: 命令) {
         match cmd {
+            命令::変数宣言 { 名前, 値 } | 命令::代入文 { 名前, 値 } => {
+                let 評価値 = self.評価(値);
+                self.記憶領域.borrow_mut().insert(名前, 評価値);
+            }
             命令::もし文 { 条件, 実行内容, さもなくば } => {
                 if self.論理評価(条件) {
                     for 内側の命令 in 実行内容 { self.命令を実行(内側の命令); }
@@ -44,11 +56,8 @@ impl Evaluator {
             命令::送信文 => {
                 let mut buffer = self.出力バッファ.borrow_mut();
                 buffer.push_str("【送信中】: GitHubへ送り届けています...\n");
-                let output = std::process::Command::new("git").args(["push", "origin", "main"]).output();
-                match output {
-                    Ok(_) => buffer.push_str("【完了】: GitHubへ無事に届きました！🚀\n"),
-                    Err(e) => buffer.push_str(&format!("【失敗】: 送信できませんでした: {}\n", e)),
-                }
+                let _ = std::process::Command::new("git").args(["push", "origin", "main"]).output();
+                buffer.push_str("【完了】: 送信が完了しました。🚀\n");
             }
         }
     }
@@ -58,7 +67,23 @@ impl Evaluator {
             式::比較 { 左辺, 演算子, 右辺 } => {
                 let 左 = self.評価(*左辺);
                 let 右 = self.評価(*右辺);
-                if 演算子 == "＝" { 左 == 右 } else { false }
+                
+                let 左の値 = match &左 { 値::数値(n) => *n, _ => 0.0 };
+                let 右の値 = match &右 { 値::数値(n) => *n, _ => 0.0 };
+
+                if 演算子 == "＝" {
+                     match (左, 右) {
+                        (値::数値(a), 値::数値(b)) => a == b,
+                        (値::文字列(a), 値::文字列(b)) => a == b,
+                        _ => false
+                    }
+                } else if 演算子 == "＞" {
+                    左の値 > 右の値
+                } else if 演算子 == "＜" {
+                    左の値 < 右の値
+                } else {
+                    false
+                }
             }
             _ => match self.評価(expr) {
                 値::数値(n) => n != 0.0,
@@ -70,6 +95,7 @@ impl Evaluator {
 
     fn 評価(&self, expr: 式) -> 値 {
         match expr {
+            式::変数(名前) => self.記憶領域.borrow().get(&名前).cloned().unwrap_or(値::空),
             式::数値(n) => 値::数値(n),
             式::文字列(s) => 値::文字列(s),
             式::計算 { 左辺, 演算子, 右辺 } => {

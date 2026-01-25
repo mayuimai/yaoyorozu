@@ -1,34 +1,33 @@
-// lexer.rs
+// src/engine/lexer.rs
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     もし,
     ならば,
-    さもなくば, // ←追加
+    さもなくば,
     繰返,
     表示,
-    終わり, // ←追加
+    変数,
+    終わり,
+    記録,
+    送信,
     識別子(String),
-    文字列(String), // ← これを追加！
+    文字列(String),
     数値(f64),
     等号,
+    大なり, // 🌟 追加！ (＞)
+    小なり, // 🌟 追加！ (＜)
     左括弧,
     右括弧,
     左中括弧,
     右中括弧,
+    加算,
+    減算,
+    乗算,
+    除算,
     空白,
     不明(char),
     終端,
-    // ...
-    加算, // ＋
-    減算, // －
-    乗算, // ＊
-    除算, // ／
-    // ...
-    // ... 今までの単語 ...
-    記録, // ← 追加
-    送信, // ← 追加
-          // ...
 }
 
 pub struct Lexer {
@@ -54,131 +53,103 @@ impl Lexer {
         let ch = self.input[self.position];
 
         match ch {
-            '『' => {
-            self.read_char(); // 『 を読み飛ばす
-            let start = self.position;
-            while self.position < self.input.len() && self.input[self.position] != '』' {
-                self.read_char();
-            }
-            // 中身を取り出す（全角数字も変換せず、ありのまま）
-            let text: String = self.input[start..self.position].iter().collect();
-            if self.position < self.input.len() {
-                self.read_char(); // 』 を読み飛ばす
-            }
-            return Token::文字列(text);
-            }
+            '『' => self.read_string(),
+            '(' | '（' => { self.read_char(); Token::左括弧 }
+            ')' | '）' => { self.read_char(); Token::右括弧 }
+            '{' | '｛' => { self.read_char(); Token::左中括弧 }
+            '}' | '｝' => { self.read_char(); Token::右中括弧 }
+            '=' | '＝' => { self.read_char(); Token::等号 }
+            '+' | '＋' => { self.read_char(); Token::加算 }
+            '-' | '－' => { self.read_char(); Token::減算 }
+            '*' | '＊' => { self.read_char(); Token::乗算 }
+            '/' | '／' => { self.read_char(); Token::除算 }
+            
+            // 🌟 ここに比較記号を追加！
+            '>' | '＞' => { self.read_char(); Token::大なり }
+            '<' | '＜' => { self.read_char(); Token::小なり }
 
-            '（' | '(' => {
-                self.read_char();
-                return Token::左括弧;
+            _ => {
+                if self.is_japanese_alphabetic(ch) || ch.is_ascii_alphabetic() || ch == '_' {
+                    let ident = self.read_identifier();
+                    match ident.as_str() {
+                        "もし" => Token::もし,
+                        "ならば" | "なら" => Token::ならば,
+                        "さもなくば" | "でなければ" => Token::さもなくば,
+                        "表示" | "言う" => Token::表示,
+                        "終わり" | "以上" | "おわり" => Token::終わり,
+                        "記録" => Token::記録,
+                        "送信" => Token::送信,
+                        "変数" | "箱" | "var" | "let" => Token::変数,
+                        _ => Token::識別子(ident),
+                    }
+                } else if ch.is_ascii_digit() || ('０'..='９').contains(&ch) {
+                     Token::数値(self.read_number())
+                } else {
+                    self.read_char();
+                    Token::不明(ch)
+                }
             }
-            '）' | ')' => {
-                self.read_char();
-                return Token::右括弧;
-            }
-            '｛' | '{' => {
-                self.read_char();
-                return Token::左中括弧;
-            }
-            '｝' | '}' => {
-                self.read_char();
-                return Token::右中括弧;
-            }
-            '＝' | '=' => {
-                self.read_char();
-                return Token::等号;
-            }
-            // --- カッコを外して、漢字を「減算」に修正しました ---
-            '＋' | '+' => {
-                self.read_char();
-                return Token::加算;
-            }
-            '－' | '-' => {
-                self.read_char();
-                return Token::減算;
-            }
-            '＊' | '*' => {
-                self.read_char();
-                return Token::乗算;
-            }
-            '／' | '/' => {
-                self.read_char();
-                return Token::除算;
-            }
-            _ => {}
         }
-
-        // 95行目付近
-        // if ch.is_ascii_digit() { を以下に書き換え
-        if ch.is_ascii_digit() || ('０'..='９').contains(&ch) {
-            return Token::数値(self.read_number());
-        }
-
-        if self.is_japanese_alphabetic(ch) {
-            let ident = self.read_identifier();
-            return match ident.as_str() {
-                "もし" => Token::もし,             //if
-                "ならば" => Token::ならば,         //if (){}
-                "さもなくば" => Token::さもなくば, // else{}
-                "繰返" => Token::繰返,
-                "表示" => Token::表示,     //echo
-                "終わり" => Token::終わり, //endif end
-                "記録" => Token::記録,     // git
-                "送信" => Token::送信,     //git
-                _ => Token::識別子(ident),
-            };
-        }
-
-        self.read_char();
-        Token::不明(ch)
     }
 
-    fn read_char(&mut self) {
-        self.position += 1;
-    }
+    // ... (read_string, read_number, read_identifier などは変更なし) ...
+    // ※ 下の関数はそのまま残しておいてください（前回修正した部分です）
 
-    fn 空白を飛ばす(&mut self) {
-        while self.position < self.input.len() && self.input[self.position].is_whitespace() {
+    fn read_string(&mut self) -> Token {
+        self.read_char(); 
+        let start = self.position;
+        while self.position < self.input.len() && self.input[self.position] != '』' {
             self.read_char();
         }
+        let s: String = self.input[start..self.position].iter().collect();
+        if self.position < self.input.len() {
+             self.read_char(); 
+        }
+        Token::文字列(s)
     }
 
-    fn is_japanese_alphabetic(&self, ch: char) -> bool {
-        ('一'..='龠').contains(&ch) || ('ぁ'..='ん').contains(&ch) || ('ァ'..='ヶ').contains(&ch)
+    fn read_number(&mut self) -> f64 {
+        let start = self.position;
+        while self.position < self.input.len()
+            && (self.input[self.position].is_ascii_digit() 
+                || ('０'..='９').contains(&self.input[self.position])
+                || self.input[self.position] == '.' 
+                || self.input[self.position] == '．') 
+        {
+            self.read_char();
+        }
+        let s: String = self.input[start..self.position].iter().collect();
+        s.replace('０', "0").replace('１', "1").replace('２', "2")
+         .replace('３', "3").replace('４', "4").replace('５', "5")
+         .replace('６', "6").replace('７', "7").replace('８', "8")
+         .replace('９', "9").replace('．', ".").parse().unwrap_or(0.0)
     }
 
     fn read_identifier(&mut self) -> String {
         let start = self.position;
         while self.position < self.input.len()
-            && self.is_japanese_alphabetic(self.input[self.position])
+            && (self.is_japanese_alphabetic(self.input[self.position]) 
+                || self.input[self.position].is_ascii_alphabetic() 
+                || self.input[self.position].is_ascii_digit()
+                || self.input[self.position] == '_')
         {
             self.read_char();
         }
         self.input[start..self.position].iter().collect()
     }
 
-    // 130行目付近
-fn read_number(&mut self) -> f64 {
-    let start = self.position;
-    while self.position < self.input.len()
-        && (self.input[self.position].is_ascii_digit() 
-            || ('０'..='９').contains(&self.input[self.position]) // 全角数字を追加
-            || self.input[self.position] == '.'
-            || self.input[self.position] == '．') // 全角ドットもついでに対応
-    {
-        self.read_char();
+    fn is_japanese_alphabetic(&self, ch: char) -> bool {
+        ('一'..='龠').contains(&ch) || 
+        ('ぁ'..='ん').contains(&ch) || 
+        ('ァ'..='ヶ').contains(&ch) || 
+        ch == 'ー'
     }
-    let s: String = self.input[start..self.position].iter().collect();
-    
-    // 全角を半角に置換してパースする
-    let s_half = s.chars().map(|c| {
-        match c {
-            '０'..='９' => ((c as u32) - 0xFF10 + 0x0030) as u8 as char,
-            '．' => '.',
-            _ => c,
-        }
-    }).collect::<String>();
 
-    s_half.parse().unwrap_or(0.0)
-}
+    fn read_char(&mut self) { self.position += 1; }
+
+    fn 空白を飛ばす(&mut self) {
+        while self.position < self.input.len() && self.input[self.position].is_whitespace() {
+            self.read_char();
+        }
+    }
 }
