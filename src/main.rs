@@ -1,12 +1,26 @@
-// 1行目：engineフォルダがあることをRustに教えます
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // リリース時に黒い画面を消すおまじない
+
+// 📂 作ったファイルたちを登録します
 pub mod engine;
+pub mod ui;
+pub mod ui_theme;
+pub mod app;
 
-use std::fs;
-use crate::engine::runner::起動装置;
+use eframe::egui;
 
-fn main() {
-    let 装置 = engine::runner::起動装置::default();
-    // パスを画像の位置（src/engine/）に合わせます
-    let 結果 = 装置.ファイルを実行する("src/engine/runner.8g");
-    println!("{}", 結果);
+fn main() -> eframe::Result<()> {
+    // ウィンドウの設定
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([1200.0, 800.0]) // Arcっぽく横長に広く
+            .with_title("八百万 (Yaoyorozu)"),
+        ..Default::default()
+    };
+
+    // アプリを起動！
+    eframe::run_native(
+        "八百万",
+        options,
+        Box::new(|cc| Ok(Box::new(app::YaoyorozuApp::new(cc)))),
+    )
 }
