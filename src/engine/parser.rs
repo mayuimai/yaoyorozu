@@ -32,6 +32,7 @@ impl Parser {
     fn 命令を解析する(&mut self) -> Option<命令> {
         match self.current_token {
             Token::もし => self.もし文を解析(),
+            Token::繰返 => self.繰り返し文を解析(), // 🌟 これを追加！
             Token::表示 => self.表示文を解析(),
             Token::記録 => { self.advance(); Some(命令::記録文) }
             Token::送信 => { self.advance(); Some(命令::送信文) }
@@ -97,6 +98,28 @@ impl Parser {
         Some(命令::もし文 { 条件, 実行内容, さもなくば: さもなくば内容 })
     }
 
+    // 🌟 以下のメソッドを Parser impl 内に追加してください
+    fn 繰り返し文を解析(&mut self) -> Option<命令> {
+        self.advance(); // "繰り返す" を消費
+        let 条件 = self.式を解析する()?;
+        
+        // "ならば" は省略可能ですが、もしあれば飛ばします
+        if self.current_token == Token::ならば { self.advance(); }
+        if self.current_token == Token::左中括弧 { self.advance(); }
+
+        let mut 実行内容 = Vec::new();
+        while self.current_token != Token::終わり && self.current_token != Token::右中括弧 && self.current_token != Token::終端 {
+            if let Some(cmd) = self.命令を解析する() {
+                実行内容.push(cmd);
+            } else {
+                self.advance();
+            }
+        }
+
+        if self.current_token == Token::右中括弧 { self.advance(); }
+        
+        Some(命令::繰り返し文 { 条件, 実行内容 })
+    }
     fn 式を解析する(&mut self) -> Option<式> { self.比較の解析() }
 
     // 🌟 ここを修正済み
