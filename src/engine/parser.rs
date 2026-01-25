@@ -153,36 +153,34 @@ impl Parser {
         Some(左辺)
     }
 
-    fn 乗除の解析(&mut self) -> Option<式> {
-        let mut 左辺 = match &self.current_token {
-            Token::数値(n) => { let val = 式::数値(*n); self.advance(); val }
-            Token::文字列(s) => { let val = 式::文字列(s.clone()); self.advance(); val }
-            Token::識別子(s) => { let val = 式::変数(s.clone()); self.advance(); val }
-            Token::左括弧 => {
-                self.advance();
-                let 内部 = self.式を解析する()?;
-                if self.current_token == Token::右括弧 { self.advance(); }
-                内部
+    // src/engine/parser.rs (145行目付近の乗除の解析を丸ごと差し替え)
+fn 乗除の解析(&mut self) -> Option<式> {
+    let mut 左辺 = match &self.current_token {
+        Token::数値(n) => { let val = 式::数値(*n); self.advance(); val }
+        Token::文字列(s) => { let val = 式::文字列(s.clone()); self.advance(); val }
+        Token::識別子(s) => { let val = 式::変数(s.clone()); self.advance(); val }
+        Token::時刻 => { self.advance(); 式::時刻 } 
+        Token::日時 => { self.advance(); 式::日時 }
+        Token::曜日 => { self.advance(); 式::曜日 }
+        Token::左括弧 => {
+            self.advance(); // ( を消費
+            let 内部 = self.式を解析する()?;
+            if self.current_token == Token::右括弧 {
+                self.advance(); // ) をしっかり消費
+            } else {
+                // ここでエラーを出す代わりに、とりあえず閉じたことにして進む
             }
-            _ => return None,
-        };
-
-        while self.current_token == Token::乗算 || self.current_token == Token::除算 {
-            let op = if self.current_token == Token::乗算 { '*' } else { '/' };
-            self.advance();
-            let 右辺 = match &self.current_token {
-                Token::数値(n) => { let val = 式::数値(*n); self.advance(); val }
-                Token::識別子(s) => { let val = 式::変数(s.clone()); self.advance(); val }
-                Token::左括弧 => {
-                    self.advance();
-                    let 内部 = self.式を解析する()?;
-                    if self.current_token == Token::右括弧 { self.advance(); }
-                    内部
-                }
-                _ => return None,
-            };
-            左辺 = 式::計算 { 左辺: Box::new(左辺), 演算子: op, 右辺: Box::new(右辺) };
+            内部
         }
-        Some(左辺)
+        _ => return None,
+    };
+
+    while self.current_token == Token::乗算 || self.current_token == Token::除算 {
+        let op = if self.current_token == Token::乗算 { '*' } else { '/' };
+        self.advance();
+        let 右辺 = self.乗除の解析()?; // 再帰的に解析
+        左辺 = 式::計算 { 左辺: Box::new(左辺), 演算子: op, 右辺: Box::new(右辺) };
+    }
+    Some(左辺)
     }
 }

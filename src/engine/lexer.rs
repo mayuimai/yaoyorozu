@@ -2,6 +2,7 @@
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
+    // loop
     もし,
     ならば,
     さもなくば,
@@ -9,18 +10,26 @@ pub enum Token {
     表示,
     変数,
     終わり,
+    // git
     記録,
     送信,
+    // time
+    時刻,
+    日時,
+    曜日,
+    // stringth
     識別子(String),
     文字列(String),
     数値(f64),
+    // kigo
     等号,
-    大なり, // 🌟 追加！ (＞)
-    小なり, // 🌟 追加！ (＜)
+    大なり,
+    小なり,
     左括弧,
     右括弧,
     左中括弧,
     右中括弧,
+    // 四則演算
     加算,
     減算,
     乗算,
@@ -73,6 +82,9 @@ impl Lexer {
                     let ident = self.read_identifier();
                     match ident.as_str() {
                         "もし" => Token::もし,
+                        "時刻" | "いま" => Token::時刻,
+                        "日時" | "日付" => Token::日時,
+                        "曜日" | "ようび" => Token::曜日,
                         "ならば" | "なら" => Token::ならば,
                         "さもなくば" | "でなければ" => Token::さもなくば,
                         "繰り返す" | "繰返" => Token::繰返, // 🌟 これを追加！
