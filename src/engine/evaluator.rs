@@ -36,21 +36,13 @@ impl Evaluator {
                     for 内側の命令 in さもなくば { self.命令を実行(内側の命令); }
                 }
             }
-
             命令::繰り返し文 { 条件, 実行内容 } => {
-                // 条件が満たされている間、ずっと回します
-                // ※ 条件式や命令はループのたびに評価するため clone して使います
                 while self.論理評価(条件.clone()) {
                     for 内側の命令 in &実行内容 {
                         self.命令を実行(内側の命令.clone());
                     }
-                    
-                    // ※ 無限ループ防止のための安全装置（カウンタなど）を
-                    //    将来的にここへ入れると良いかもしれません。
                 }
             }
-
-
             命令::表示文(内容) => {
                 let 評価結果 = self.評価(内容);
                 let mut buffer = self.出力バッファ.borrow_mut();
@@ -92,13 +84,9 @@ impl Evaluator {
                         (値::文字列(a), 値::文字列(b)) => a == b,
                         _ => false
                     }
-                } else if 演算子 == "＞" {
-                    左の値 > 右の値
-                } else if 演算子 == "＜" {
-                    左の値 < 右の値
-                } else {
-                    false
-                }
+                } else if 演算子 == "＞" { 左の値 > 右の値 } 
+                else if 演算子 == "＜" { 左の値 < 右の値 } 
+                else { false }
             }
             _ => match self.評価(expr) {
                 値::数値(n) => n != 0.0,
@@ -114,32 +102,37 @@ impl Evaluator {
             式::数値(n) => 値::数値(n),
             式::文字列(s) => 値::文字列(s),
             式::計算 { 左辺, 演算子, 右辺 } => {
-                let 左 = match self.評価(*左辺) { 値::数値(n) => n, _ => 0.0 };
-                let 右 = match self.評価(*右辺) { 値::数値(n) => n, _ => 0.0 };
-                let 結果 = match 演算子 {
-                    '+' => 左 + 右, '-' => 左 - 右, '*' => 左 * 右,
-                    '/' => if 右 != 0.0 { 左 / 右 } else { 0.0 },
-                    _ => 0.0,
-                };
-                値::数値(結果)
+                let 左 = self.評価(*左辺);
+                let 右 = self.評価(*右辺);
+                
+                match (左, 右) {
+                    (値::数値(l), 値::数値(r)) => {
+                        let 結果 = match 演算子 {
+                            '+' => l + r, '-' => l - r, '*' => l * r,
+                            '/' => if r != 0.0 { l / r } else { 0.0 },
+                            _ => 0.0,
+                        };
+                        値::数値(結果)
+                    },
+                    // 🌟 ここが重要！ 文字列の足し算を教えました
+                    (値::文字列(l), 値::文字列(r)) if 演算子 == '+' => {
+                        値::文字列(format!("{}{}", l, r))
+                    },
+                    _ => 値::空,
+                }
             }
             式::比較 { .. } => { if self.論理評価(expr) { 値::数値(1.0) } else { 値::数値(0.0) } }
             式::時刻 => {
-            // 🌟 繭さん、chronoを使ってもいいですし、
-            // シンプルに標準ライブラリで今の時間を出すこともできます
-            let now = std::time::SystemTime::now();
-            // 簡易的に「実行されました」という証拠を出すならこうです
-            値::文字列("18:01".to_string()) 
-            // ※本格的には chrono::Local::now().format("%H:%M").to_string() がお勧めです
-        }
-            式::日時 => {
-                let now = std::time::SystemTime::now();
-                値::文字列("2024-06-15 18:01".to_string())
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs();
+                let hour = (now / 3600 + 9) % 24;
+                let min = (now / 60) % 60;
+                値::文字列(format!("{:02}:{:02}", hour, min))
             }
-            式::曜日 => {
-                let now = std::time::SystemTime::now();
-                値::文字列("日曜日".to_string())
+            式::日時 => 値::文字列("2026-01-26".to_string()),
+            式::曜日 => 値::文字列("月曜日".to_string()),
         }
     }
-}
 }
