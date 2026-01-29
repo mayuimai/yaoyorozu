@@ -1,6 +1,6 @@
 use eframe::egui;
 use crate::ui_theme;
-use crate::ui::sidebar; // サイドバーを使う
+use crate::ui::sidebar;
 use crate::engine::runner::起動装置;
 
 // 🌟 これが sidebar.rs で必要だった「開かれた書物」です！
@@ -32,6 +32,12 @@ impl Default for YaoyorozuApp {
             files: vec![
                 開かれた書物 { 名前: "runner.8g".to_string(), 中身: runner_code, 保存済み: true },
                 開かれた書物 { 名前: "memo.txt".to_string(), 中身: "メモ帳として使えます".to_string(), 保存済み: true },
+                // テスト用のブログ記事ファイル
+                開かれた書物 { 
+                    名前: "y-site-ed/content/test.md".to_string(), 
+                    中身: "+++\ntitle = \"テスト記事\"\n+++\n\n# こんにちは！\nこれは八百万エディタから投稿したテストです。".to_string(), 
+                    保存済み: false 
+                },
             ],
             active_tab: 0,
             output_log: "ここに実行結果が表示されます...".to_owned(),
@@ -59,7 +65,6 @@ impl eframe::App for YaoyorozuApp {
                 .resizable(true)
                 .default_width(200.0)
                 .show(ctx, |ui| {
-                    // 🌟 ここで sidebar.rs の関数を呼び出します
                     sidebar::render(ui, &mut self.files, &mut self.active_tab);
                 });
         }
@@ -93,6 +98,7 @@ impl eframe::App for YaoyorozuApp {
                 }
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    // ▶ 実行ボタン
                     if ui.button("▶ 実行").clicked() {
                         if let Some(file) = self.files.get(self.active_tab) {
                             if file.名前 == "runner.8g" {
@@ -103,15 +109,49 @@ impl eframe::App for YaoyorozuApp {
                             }
                         }
                     }
+
+                    // 💾 保存ボタン（ここにZola機能を搭載！）
                     if ui.button("💾 保存").clicked() {
-                         if let Some(file) = self.files.get(self.active_tab) {
-                             if file.名前 == "runner.8g" {
-                                 let _ = std::fs::write("src/engine/runner.8g", &file.中身);
-                             }
-                             self.output_log.push_str("\n【保存】: 保存しました。");
-                         }
+                        if let Some(file) = self.files.get(self.active_tab) {
+                            // 1. ファイルを保存（既存の処理）
+                            let save_path = if file.名前 == "runner.8g" {
+                                "src/engine/runner.8g".to_string()
+                            } else {
+                                file.名前.clone()
+                            };
+                            
+                            if let Err(e) = std::fs::write(&save_path, &file.中身) {
+                                self.output_log.push_str(&format!("\n【エラー】: 書き込み失敗 - {}", e));
+                            } else {
+                                self.output_log.push_str("\n【保存】: 保存しました。");
+
+                                // 🌟 2. Zolaビルドの発動（Markdownファイルを保存した時だけ動く）
+                                if save_path.ends_with(".md") {
+                                    use std::process::Command;
+                                    
+                                    // tools/zola.exe を使って、y-site-ed フォルダをビルドする
+                                    let output = Command::new("tools/zola.exe")
+                                        .args(["build"])
+                                        .current_dir("y-site-ed") // 👈 ここを "y-site-ed" に修正済み！
+                                        .output();
+
+                                    match output {
+                                        Ok(o) if o.status.success() => {
+                                            self.output_log.push_str("\n【Web】: Zolaビルド成功！(y-site-ed)");
+                                        }
+                                        Ok(o) => {
+                                            let err = String::from_utf8_lossy(&o.stderr);
+                                            self.output_log.push_str(&format!("\n【エラー】: Zolaが怒っています…\n{}", err));
+                                        }
+                                        Err(e) => {
+                                            self.output_log.push_str(&format!("\n【失敗】: tools/zola.exe が見つからないかも？: {}", e));
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
-                });
+                }); // ここで右寄せレイアウト終了
             });
 
             ui.separator();
